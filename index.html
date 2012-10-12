@@ -1,0 +1,257 @@
+<!DOCTYPE html public '❄'>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>YTLocal</title>
+    <script type="text/javascript" src="jquery.min.js"></script>
+    <script src="https://www.google.com/jsapi?key=ABQIAAAAUFhWyG3PCr5qQ1N1-Da58BSijuhDh6bhkVNiCWkwXm1RWNn4jxTIhy9VD42I5uMUjGdZgqjFfBxulQ" type="text/javascript"></script>
+    <script type="text/javascript">
+        google.load("swfobject", "2.1");
+
+        function get_random(elem) {
+            var len = elem.length,
+                ran = Math.random() * len;
+            if (len) {
+                return elem[Math.floor(ran)];
+            }
+        };
+
+        var ytplayer = null,
+            format = 'default',
+            autoplay = true,
+            currently_related = [];
+
+        function play_pause() {
+            if (ytplayer) {
+                if (ytplayer.getPlayerState() == 1) {
+                    ytplayer.pauseVideo();
+                } else {
+                    ytplayer.playVideo();
+                }
+            }
+        }
+
+        function volume_up() {
+            if (ytplayer) {
+                var vol = ytplayer.getVolume(),
+                    value = (vol + 10 > 100) ? 100 : vol + 10;
+                ytplayer.setVolume(value);
+            }
+        }
+
+        function volume_down() {
+            if (ytplayer) {
+                var vol = ytplayer.getVolume(),
+                    value = (vol - 10 < 0) ? 0 : vol - 10;
+                ytplayer.setVolume(value);
+            }
+        }
+
+        function get_player_state() {
+            if (ytplayer) {
+                return ytplayer.getPlayerState();
+            }
+        }
+
+        function get_song_bytes_loaded() {
+            if (ytplayer) {
+                return ytplayer.getVideoBytesLoaded();
+            }
+        }
+
+        function get_song_bytes_total() {
+            if (ytplayer) {
+                return ytplayer.getVideoBytesTotal();
+            }
+        }
+
+        function get_song_current_time() {
+            if (ytplayer) {
+                return ytplayer.getCurrentTime();
+            }
+        }
+
+        function get_song_duration() {
+            if (ytplayer) {
+                return ytplayer.getDuration();
+            }
+        }
+
+        function volume_mute() {
+            if (ytplayer) {
+                if (ytplayer.isMuted()) {
+                    ytplayer.unMute();
+                } else {
+                    ytplayer.mute();
+                }
+            }
+        }
+
+        function seek_to(seconds) {
+            if (ytplayer) {
+                ytplayer.seekTo(seconds, true);
+            }
+        }
+
+        function update_payer_info() {
+            var pros, pros2, time_total, time_now, m, s, buf = '';
+            if (ytplayer) {
+                pros = (get_song_bytes_loaded() / get_song_bytes_total()) * 100;
+                time_total = get_song_duration();
+                time_now = get_song_current_time();
+                if (time_total >= 0 && time_now >= 0) {
+                    pros2 = (time_now / time_total) * 100;
+                    m = Math.floor(time_now / 60);
+                    s = Math.floor(time_now % 60);
+                    buf = (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+                    buf = buf + " / ";
+                    m = Math.floor(time_total / 60);
+                    s = Math.floor(time_total % 60);
+                    buf += (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+                } else {
+                    pros = pros2 = 0;
+                }
+            }
+            $('#song_time').html(buf);
+        }
+
+        function load_new_video(watch, startSeconds) {
+            if (ytplayer && watch) {
+                ytplayer.loadVideoById(watch, parseInt(startSeconds, 10), format);
+                $.getScript('https://gdata.youtube.com/feeds/api/videos/' + watch + '?v=2&format=5&alt=json-in-script&callback=clbk');
+            }
+        }
+
+        function play_watch(watch) {
+            location.href = '#' + watch;
+            $('#hash').val(watch);
+            load_new_video(watch);
+        }
+
+        function new_song() {
+            if($('#hash').val()) {
+                play_watch($('#hash').val());
+            }
+            return false;
+        }
+
+        function onYouTubePlayerReady(playerId) {
+            ytplayer = document.getElementById('myytplayer');
+            setInterval(update_payer_info, 500);
+            ytplayer.addEventListener("onStateChange", "on_player_state_change");
+            ytplayer.addEventListener('onError', 'on_player_error');
+            if (autoplay) {
+                handle_hash();
+            }
+        }
+
+        function on_player_state_change(newState) {
+            if (newState === 0) {
+                setTimeout(function() {
+                    if($('#loop:checked').length) {
+                        seek_to(0);
+                    } else if(currently_related) {
+                        play_watch(get_random(currently_related));
+                    }
+                }, 1000);
+            }
+        }
+
+        function on_player_error(errorCode) {
+            alert('ERROR:' + errorCode);
+        }
+
+        function handle_hash() {
+            var l = location.hash;
+            if (l.indexOf('#') === 0 && l.substring(1)) {
+                play_watch(l.substring(1))
+            }
+        }
+        function clbk(data) {
+            var id = data.entry.media$group.yt$videoid.$t;
+
+            document.title = data.entry.title.$t;
+            $('#song_title').text(data.entry.title.$t);
+            $('#song_descr').text(data.entry.media$group.media$description.$t);
+            $('#thumbs_up').text(data.entry.yt$rating.numLikes);
+            $('#thumbs_down').text(data.entry.yt$rating.numDislikes);
+            $('#view_count').text(data.entry.yt$statistics.viewCount);
+            $.getScript('https://gdata.youtube.com/feeds/api/videos/' + id + '/related?v=2&format=5&category=Music&alt=json-in-script&callback=related');
+        }
+
+        function related(data) {
+            currently_related = []
+            var feed = data.feed.entry;
+            $('#related').text('-');
+            for (var i = 0; i < feed.length; i++) {
+                var id = feed[i].media$group.yt$videoid.$t;
+                $('<a/>').attr('href', '#' + id).addClass('related').data('id', id).text(feed[i].title.$t).append('<br>').appendTo('#related');
+                currently_related.push(id);
+            };
+        }
+
+        $(document).ready(function() {
+            $(document).bind('keypress', function(e) {
+                var target = (e.target && e.target.type) || 'other';
+                if (target != 'text' && target != 'submit') {
+                    if (e.which == 32) {
+                        play_pause();
+                        return false;
+                    }
+                }
+            });
+            $('a.related').live('click', function() {
+                play_watch($(this).data('id'));
+            });
+
+            if(localStorage) {
+                $('input.check').each(function(){
+                    var val = localStorage.getItem('checkbox_' + this.name) === '1';
+                    $('input[name=' + this.name +']').prop('checked', val);
+                }).on('change', function(){
+                    localStorage.setItem('checkbox_' + this.name, this.checked?'1':'0');
+                });
+            }
+
+        });
+    </script>
+ </head>
+<body>
+
+    <script type="text/javascript"> 
+        var params = { allowScriptAccess: "always", bgcolor: "#cccccc" };
+        var atts = { id: "myytplayer" };
+        swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=ytplayer",
+                     "ytapiplayer", "290", "217", "8", null, null, params, atts);
+    </script> 
+    <div id="ytapiplayer">You need Flash player 8+ and JavaScript enabled to view this video.</div>
+    <hr>
+    <a href="javascript:void(0);" onclick="play_pause();">play/pause</a>
+    <a href="javascript:void(0);" onclick="volume_mute();">mute/unmute</a>
+    <a href="javascript:void(0);" onclick="volume_up();">vol up</a>
+    <a href="javascript:void(0);" onclick="volume_down();">vol down</a>
+    Loop: <input type=checkbox class=check name=loop id=loop value=1>
+    <hr>
+    <div id='song_title'>data.entry.title.$t</div>
+    <div id="song_descr">.</div>
+    <div id='song_time'>00:00 / 00:00</div>
+
+     up: <span id="thumbs_up">0</span>
+     down: <span id="thumbs_down">0</span>
+     views <span id="view_count">0</span>
+
+    <hr>
+    <form onSubmit='new_song();'>
+        <input id="hash"> <input type=submit>
+    </form>
+
+    <div id="related">related</div>
+  </body>
+</html>
+
+<!--
+https://gdata.youtube.com/feeds/api/videos?q=Two%20X)%20-%20Double%20Up&v=2&format=5&category=Music&alt=json-in-script&callback=jsonp1
+https://gdata.youtube.com/feeds/api/videos/nCBV176XWB0?v=2&format=5&alt=json-in-script&callback=clbk
+https://gdata.youtube.com/feeds/api/videos/nCBV176XWB0/related?v=2&format=5&category=Music&alt=json-in-script&callback=clbk
+ogMNV33AhCY
+-->
