@@ -3,6 +3,40 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>YTLocal</title>
+    <link href='//fonts.googleapis.com/css?family=Cabin|Lato' rel='stylesheet' type='text/css'>
+    <style type="text/css">
+        #content {
+            margin: 0 auto;
+            background-color: #ccc;
+            width: 800px;
+            text-align: center;
+        }
+        form {
+            display: inline;
+        }
+        #q {
+            width: 780px;
+            outline: none;
+            margin: 10px;
+            box-sizing: border-box;
+            color: black;
+            cursor: auto;
+            display: inline-block;
+            font: 16px arial, sans-serif;
+            height: 30px;
+            padding: 2px 6px;
+        }
+        #song_title {
+            margin: 5px 10px;
+            font-family: 'Cabin', serif;
+            font-size: 20px;
+        }
+        #song_descr {
+            margin: 5px 10px;
+            font-family: 'Lato', serif;
+            font-size: 15px;
+        }
+    </style>
     <script type="text/javascript" src="jquery.min.js"></script>
     <script src="https://www.google.com/jsapi?key=ABQIAAAAUFhWyG3PCr5qQ1N1-Da58BSijuhDh6bhkVNiCWkwXm1RWNn4jxTIhy9VD42I5uMUjGdZgqjFfBxulQ" type="text/javascript"></script>
     <script type="text/javascript">
@@ -17,9 +51,12 @@
         };
 
         var ytplayer = null,
+            track_limit = 5,
             format = 'default',
             autoplay = true,
-            currently_related = [];
+            search_results = [],
+            currently_related = [],
+            api_url = 'https://gdata.youtube.com/feeds/api/videos/';
 
         function play_pause() {
             if (ytplayer) {
@@ -118,19 +155,24 @@
         function load_new_video(watch, startSeconds) {
             if (ytplayer && watch) {
                 ytplayer.loadVideoById(watch, parseInt(startSeconds, 10), format);
-                $.getScript('https://gdata.youtube.com/feeds/api/videos/' + watch + '?v=2&format=5&alt=json-in-script&callback=clbk');
+                $.getScript(api_url + watch + '?v=2&format=5&alt=json-in-script&callback=clbk_current');
             }
         }
 
         function play_watch(watch) {
             location.href = '#' + watch;
-            $('#hash').val(watch);
             load_new_video(watch);
         }
 
-        function new_song() {
-            if($('#hash').val()) {
-                play_watch($('#hash').val());
+        function search_by_title(title) {
+            title = encodeURIComponent(title)
+            $('#tracks').text('Searching...');
+            $.getScript(api_url + '?q=' + title + '&v=2&format=5&category=Music&alt=json-in-script&callback=clbk_search');
+        }
+
+        function search_submit() {
+            if($('#q').val()) {
+                search_by_title($('#q').val())
             }
             return false;
         }
@@ -167,27 +209,52 @@
                 play_watch(l.substring(1))
             }
         }
-        function clbk(data) {
+        function clbk_current(data) {
             var id = data.entry.media$group.yt$videoid.$t;
 
             document.title = data.entry.title.$t;
-            $('#song_title').text(data.entry.title.$t);
-            $('#song_descr').text(data.entry.media$group.media$description.$t);
+            $('#song_title').html(data.entry.title.$t);
+            console.log(data.entry.media$group.media$description.$t);
+            $('#song_descr').html(data.entry.media$group.media$description.$t);
             $('#thumbs_up').text(data.entry.yt$rating.numLikes);
             $('#thumbs_down').text(data.entry.yt$rating.numDislikes);
             $('#view_count').text(data.entry.yt$statistics.viewCount);
-            $.getScript('https://gdata.youtube.com/feeds/api/videos/' + id + '/related?v=2&format=5&category=Music&alt=json-in-script&callback=related');
+            $.getScript(api_url + id + '/related?v=2&format=5&category=Music&alt=json-in-script&callback=clbk_related');
         }
 
-        function related(data) {
+        function clbk_related(data) {
             currently_related = []
             var feed = data.feed.entry;
-            $('#related').text('-');
+            $('#tracks').text('');
             for (var i = 0; i < feed.length; i++) {
                 var id = feed[i].media$group.yt$videoid.$t;
-                $('<a/>').attr('href', '#' + id).addClass('related').data('id', id).text(feed[i].title.$t).append('<br>').appendTo('#related');
+                $('<a/>').attr('href', '#' + id).addClass('play_me').data('id', id).text(feed[i].title.$t).append('<br>').appendTo('#tracks');
                 currently_related.push(id);
+                if(currently_related.length >= track_limit) {
+                    break;
+                }
             };
+            if(currently_related.length === 0) {
+                $('#tracks').text('No related tracks!')
+            }
+        }
+
+        function clbk_search(data) {
+            search_results = []
+            var feed = data.feed.entry;
+            $('#tracks').text('');
+            for (var i = 0; i < feed.length; i++) {
+                var id = feed[i].media$group.yt$videoid.$t;
+                $('<a/>').attr('href', '#' + id).addClass('play_me').data('id', id).text(feed[i].title.$t).append('<br>').appendTo('#tracks');
+                search_results.push(id);
+                if(search_results.length >= track_limit) {
+                    break;
+                }
+            };
+            if(search_results.length === 0) {
+                $('#tracks').text('No search results!')
+            }
+
         }
 
         $(document).ready(function() {
@@ -200,8 +267,13 @@
                     }
                 }
             });
-            $('a.related').live('click', function() {
+            $('a.play_me').live('click', function() {
                 play_watch($(this).data('id'));
+            });
+
+            $('#search').on('submit', function(e) {
+                search_submit();
+                e.preventDefault();
             });
 
             if(localStorage) {
@@ -217,41 +289,39 @@
     </script>
  </head>
 <body>
-
     <script type="text/javascript"> 
-        var params = { allowScriptAccess: "always", bgcolor: "#cccccc" };
+        var params = {
+            allowScriptAccess: "always",
+            bgcolor: "#cccccc"
+        };
         var atts = { id: "myytplayer" };
         swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=ytplayer",
-                     "ytapiplayer", "290", "217", "8", null, null, params, atts);
-    </script> 
-    <div id="ytapiplayer">You need Flash player 8+ and JavaScript enabled to view this video.</div>
-    <hr>
-    <a href="javascript:void(0);" onclick="play_pause();">play/pause</a>
-    <a href="javascript:void(0);" onclick="volume_mute();">mute/unmute</a>
-    <a href="javascript:void(0);" onclick="volume_up();">vol up</a>
-    <a href="javascript:void(0);" onclick="volume_down();">vol down</a>
-    Loop: <input type=checkbox class=check name=loop id=loop value=1>
-    <hr>
-    <div id='song_title'>data.entry.title.$t</div>
-    <div id="song_descr">.</div>
-    <div id='song_time'>00:00 / 00:00</div>
+                     "ytapiplayer", "580", "434", "8", null, null, params, atts);
+    </script>
+    <div id="content">
+        <form id='search'>
+            <input id="q">
+        </form>
+    <div id="tracks"></div>
 
-     up: <span id="thumbs_up">0</span>
-     down: <span id="thumbs_down">0</span>
-     views <span id="view_count">0</span>
+    <div id='song_title'></div>
 
-    <hr>
-    <form onSubmit='new_song();'>
-        <input id="hash"> <input type=submit>
-    </form>
+    <div id="ytapiplayer"><img src="no_flash.gif" width=580 height=434></div>
+    <br>
+         up: <span id="thumbs_up">42164</span>
+         down: <span id="thumbs_down">460</span>
+         views <span id="view_count">7437000</span>
+        <span id='song_time'>00:00 / 03:40</span>
+        <br>
+        <a href="javascript:void(0);" onclick="play_pause();">play/pause</a>
+        <a href="javascript:void(0);" onclick="volume_mute();">mute/unmute</a>
+        <a href="javascript:void(0);" onclick="volume_up();">up</a>
+        <a href="javascript:void(0);" onclick="volume_down();">down</a>
+        <label>
+            Loop <input type='checkbox' class='check' name='loop' id='loop' value='1'>
+        </label>
 
-    <div id="related">related</div>
+        <div id="song_descr"></div>
+    </div>
   </body>
 </html>
-
-<!--
-https://gdata.youtube.com/feeds/api/videos?q=Two%20X)%20-%20Double%20Up&v=2&format=5&category=Music&alt=json-in-script&callback=jsonp1
-https://gdata.youtube.com/feeds/api/videos/nCBV176XWB0?v=2&format=5&alt=json-in-script&callback=clbk
-https://gdata.youtube.com/feeds/api/videos/nCBV176XWB0/related?v=2&format=5&category=Music&alt=json-in-script&callback=clbk
-ogMNV33AhCY
--->
