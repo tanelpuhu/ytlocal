@@ -210,12 +210,15 @@
             }
         }
         function clbk_current(data) {
-            var id = data.entry.media$group.yt$videoid.$t;
+            var id = data.entry.media$group.yt$videoid.$t,
+                desc = data.entry.media$group.media$description.$t;
 
+            while(desc.indexOf('\n') != -1) {
+                desc = desc.replace('\n', '<br>');
+            }
             document.title = data.entry.title.$t;
             $('#song_title').html(data.entry.title.$t);
-            console.log(data.entry.media$group.media$description.$t);
-            $('#song_descr').html(data.entry.media$group.media$description.$t);
+            $('#song_descr').html(desc);
             $('#thumbs_up').text(data.entry.yt$rating.numLikes);
             $('#thumbs_down').text(data.entry.yt$rating.numDislikes);
             $('#view_count').text(data.entry.yt$statistics.viewCount);
@@ -308,10 +311,10 @@
 
     <div id="ytapiplayer"><img src="no_flash.gif" width=580 height=434></div>
     <br>
-         up: <span id="thumbs_up">42164</span>
-         down: <span id="thumbs_down">460</span>
-         views <span id="view_count">7437000</span>
-        <span id='song_time'>00:00 / 03:40</span>
+        ↑<span id="thumbs_up">-</span>
+        ↓ <span id="thumbs_down">-</span>
+        &#30446; <span id="view_count">-</span>
+        <span id='song_time'>00:00 / 00:00</span>
         <br>
         <a href="javascript:void(0);" onclick="play_pause();">play/pause</a>
         <a href="javascript:void(0);" onclick="volume_mute();">mute/unmute</a>
