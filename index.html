@@ -3,45 +3,20 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>YTLocal</title>
-    <link href='//fonts.googleapis.com/css?family=Cabin|Lato' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
     <style type="text/css">
-        #content {
-            margin: 0 auto;
-            background-color: #ccc;
-            width: 800px;
-            text-align: center;
+        body {
+          margin-top: 70px;
         }
-        form {
-            display: inline;
-        }
-        #q {
-            width: 780px;
-            outline: none;
-            margin: 10px;
-            box-sizing: border-box;
-            color: black;
-            cursor: auto;
-            display: inline-block;
-            font: 16px arial, sans-serif;
-            height: 30px;
-            padding: 2px 6px;
-        }
-        #song_title {
-            margin: 5px 10px;
-            font-family: 'Cabin', serif;
-            font-size: 20px;
-        }
-        #song_descr {
-            margin: 5px 10px;
-            font-family: 'Lato', serif;
-            font-size: 15px;
+        .center {
+          text-align: center;
         }
     </style>
-    <script type="text/javascript" src="jquery.min.js"></script>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
     <script src="https://www.google.com/jsapi?key=ABQIAAAAUFhWyG3PCr5qQ1N1-Da58BSijuhDh6bhkVNiCWkwXm1RWNn4jxTIhy9VD42I5uMUjGdZgqjFfBxulQ" type="text/javascript"></script>
     <script type="text/javascript">
         google.load("swfobject", "2.1");
-
         function get_random(elem) {
             var len = elem.length,
                 ran = Math.random() * len;
@@ -51,7 +26,11 @@
         };
 
         var ytplayer = null,
-            track_limit = 5,
+            player = {
+              height: 242,
+              width: 325
+            }
+            track_limit = 25,
             format = 'default',
             autoplay = true,
             search_results = [],
@@ -130,21 +109,23 @@
             }
         }
 
+        function time_text(seconds) {
+          var m = Math.floor(seconds / 60),
+              s = Math.floor(seconds % 60);
+          return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+        }
+
         function update_payer_info() {
-            var pros, pros2, time_total, time_now, m, s, buf = '';
+            var pros, pros2, time_total, time_now, buf = '';
             if (ytplayer) {
                 pros = (get_song_bytes_loaded() / get_song_bytes_total()) * 100;
                 time_total = get_song_duration();
                 time_now = get_song_current_time();
                 if (time_total >= 0 && time_now >= 0) {
                     pros2 = (time_now / time_total) * 100;
-                    m = Math.floor(time_now / 60);
-                    s = Math.floor(time_now % 60);
-                    buf = (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+                    buf = time_text(time_now);
                     buf = buf + " / ";
-                    m = Math.floor(time_total / 60);
-                    s = Math.floor(time_total % 60);
-                    buf += (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+                    buf += time_text(time_total);
                 } else {
                     pros = pros2 = 0;
                 }
@@ -166,7 +147,7 @@
 
         function search_by_title(title) {
             title = encodeURIComponent(title)
-            $('#tracks').text('Searching...');
+            $('#status').text('Searching...');
             $.getScript(api_url + '?q=' + title + '&v=2&format=5&category=Music&alt=json-in-script&callback=clbk_search');
         }
 
@@ -222,40 +203,52 @@
             $('#thumbs_up').text(data.entry.yt$rating.numLikes);
             $('#thumbs_down').text(data.entry.yt$rating.numDislikes);
             $('#view_count').text(data.entry.yt$statistics.viewCount);
+            $('#status').text('Refreching with related tracks...');
             $.getScript(api_url + id + '/related?v=2&format=5&category=Music&alt=json-in-script&callback=clbk_related');
         }
 
+        function print_tracks(feed) {
+          if(feed === undefined) {
+            return [];
+          }
+          $('#status').text('');
+          if(feed.length) {
+            $('.mytable').removeClass('hide').html('');
+            $('#search-suggest').hide();
+          }
+          var result = [];
+          for (var i = 0; i < feed.length; i++) {
+              var id = feed[i].media$group.yt$videoid.$t,
+                  img_src = feed[i].media$group.media$thumbnail[0].url,
+                  title = feed[i].title.$t,
+                  duration = feed[i].media$group.yt$duration.seconds;
+                  row = "<tr><td><a href='#" + id + "' class='play_me' data-id='" + id +"'><img src='" +img_src + "' border=0></a></td>";
+                  row+= "<td><a href='#" + id + "' class='play_me' data-id='" + id +"'>" + title + "</a></td>"
+                  row+= "<td class='pagination-right'>" + time_text(duration) + "</td></tr>"
+              $('.mytable').append(row);
+              result.push(id);
+              if(result.length >= track_limit) {
+                  break;
+              }
+          };
+          return result;
+        }
+
         function clbk_related(data) {
-            currently_related = []
-            var feed = data.feed.entry;
-            $('#tracks').text('');
-            for (var i = 0; i < feed.length; i++) {
-                var id = feed[i].media$group.yt$videoid.$t;
-                $('<a/>').attr('href', '#' + id).addClass('play_me').data('id', id).text(feed[i].title.$t).append('<br>').appendTo('#tracks');
-                currently_related.push(id);
-                if(currently_related.length >= track_limit) {
-                    break;
-                }
-            };
+            currently_related = print_tracks(data.feed.entry);
             if(currently_related.length === 0) {
-                $('#tracks').text('No related tracks!')
+                $('#status').text('No related tracks!')
+            } else {
+                $('#status').text('')
             }
         }
 
         function clbk_search(data) {
-            search_results = []
-            var feed = data.feed.entry;
-            $('#tracks').text('');
-            for (var i = 0; i < feed.length; i++) {
-                var id = feed[i].media$group.yt$videoid.$t;
-                $('<a/>').attr('href', '#' + id).addClass('play_me').data('id', id).text(feed[i].title.$t).append('<br>').appendTo('#tracks');
-                search_results.push(id);
-                if(search_results.length >= track_limit) {
-                    break;
-                }
-            };
+            search_results = print_tracks(data.feed.entry);
             if(search_results.length === 0) {
-                $('#tracks').text('No search results!')
+                $('#status').text('No search results!')
+            } else {
+                $('#status').text('')
             }
 
         }
@@ -290,41 +283,60 @@
 
         });
     </script>
- </head>
+</head>
 <body>
-    <script type="text/javascript"> 
-        var params = {
-            allowScriptAccess: "always",
-            bgcolor: "#cccccc"
-        };
-        var atts = { id: "myytplayer" };
-        swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=ytplayer",
-                     "ytapiplayer", "580", "434", "8", null, null, params, atts);
-    </script>
-    <div id="content">
-        <form id='search'>
-            <input id="q">
+  <div class="navbar navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container-fluid topbar">
+        <a class="brand" href="./">YTLocal</a>
+        <span class='navbar-text' id="status"></span>
+        <form class='navbar-form pull-right' id="search">
+          <input type='search' class='span7' id=q placeholder=' song title '>
+          <input type='submit' value=' Search ' class='btn btn-primary'>
         </form>
-    <div id="tracks"></div>
-
-    <div id='song_title'></div>
-
-    <div id="ytapiplayer"><img src="no_flash.gif" width=580 height=434></div>
-    <br>
-        ↑<span id="thumbs_up">-</span>
-        ↓ <span id="thumbs_down">-</span>
-        &#30446; <span id="view_count">-</span>
-        <span id='song_time'>00:00 / 00:00</span>
-        <br>
-        <a href="javascript:void(0);" onclick="play_pause();">play/pause</a>
-        <a href="javascript:void(0);" onclick="volume_mute();">mute/unmute</a>
-        <a href="javascript:void(0);" onclick="volume_up();">up</a>
-        <a href="javascript:void(0);" onclick="volume_down();">down</a>
-        <label>
-            Loop <input type='checkbox' class='check' name='loop' id='loop' value='1'>
-        </label>
-
+      </div>
+    </div>
+  </div>
+  <div class='container-fluid'>
+    <div class="row-fluid">
+      <div class="span4">
+        <div class="center">
+          <script type="text/javascript"> 
+              var params = {
+                  allowScriptAccess: "always",
+                  bgcolor: "#cccccc"
+              };
+              var atts = { id: "myytplayer" };
+              swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=ytplayer",
+                           "ytapiplayer", player.width, player.height, "8", null, null, params, atts);
+          </script>
+          <h4 id='song_title'>Random Title</h4>
+          <div id="ytapiplayer">No Flash</div>
+          <br>
+          ↑ <span id="thumbs_up" class="bold">-</span>
+          ↓ <span id="thumbs_down" class="bold">-</span>
+          &#30446; <span id="view_count" class="bold">-</span>
+          <span id='song_time'>00:00 / 00:00</span>
+          <div class="btn-group">
+            <button class="btn" onclick="play_pause();">play/pause</button>
+            <button class="btn" onclick="volume_mute();">mute/unmute</button>
+            <button class="btn" onclick="volume_up();">up</button>
+            <button class="btn" onclick="volume_down();">down</button>
+          <label>
+              Loop <input type='checkbox' class='check' name='loop' id='loop' value='1'>
+          </label>
+            </div>
+        </div>
+        <hr>
         <div id="song_descr"></div>
+        </div>
+        <div class="span8">
+          <h3 class="pull-right" id="search-suggest">↑ Search for something</h3>
+          <table class='table hide mytable' border=0 cellpadding=4>
+          </table>
+          <div id="tracks"></div>
+        </div>
+      </div>
     </div>
   </body>
 </html>
