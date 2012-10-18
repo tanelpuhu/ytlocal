@@ -30,7 +30,7 @@
               height: 242,
               width: 325
             }
-            track_limit = 25,
+            track_limit = 15,
             format = 'default',
             autoplay = true,
             search_results = [],
@@ -144,6 +144,10 @@
                 current_track = watch;
                 $('#play').text('pause');
                 $.getScript(api_url + watch + '?v=2&format=5&alt=json-in-script&callback=clbk_current');
+                $("tr[data-id='" + watch + "']").fadeOut().remove();
+                if($('.track').length === 0) {
+                    load_related();
+                }
             }
         }
 
@@ -177,13 +181,8 @@
 
         function play_next() {
           var next = $('.track:lt(1)');
-          if(next.data('id') === current_track) {
-            next.fadeOut().remove();
-            next = $('.track:lt(1)');
-          }
           if(next.length && next.data('id')) {
             play_watch(next.data('id'));
-            next.fadeOut().remove();
           }
         }
 
@@ -222,8 +221,13 @@
             $('#thumbs_up').text(data.entry.yt$rating.numLikes);
             $('#thumbs_down').text(data.entry.yt$rating.numDislikes);
             $('#view_count').text(data.entry.yt$statistics.viewCount);
+        }
+
+        function load_related() {
+          if(current_track) {
             $('#status').text('Refreshing with related tracks...');
-            $.getScript(api_url + id + '/related?v=2&format=5&category=Music&alt=json-in-script&callback=clbk_related');
+            $.getScript(api_url + current_track + '/related?v=2&format=5&category=Music&alt=json-in-script&callback=clbk_related');
+          }
         }
 
         function print_tracks(feed) {
@@ -343,11 +347,12 @@
             <button class="btn" onclick="volume_down();">down</button>
             <button class="btn" onclick="play_next();">next</button>
           </div>
+          <br>
+          <button class="btn" onclick="load_related();">Load related</button>
+          <label>
+              <input type='checkbox' class='check' name='loop' id='loop' value='1'> Loop
+          </label>
         </div>
-        <br>
-        <label>
-            <input type='checkbox' class='check' name='loop' id='loop' value='1'> Loop
-        </label>
         <hr>
         <div id="song_descr"></div>
         </div>
@@ -355,7 +360,6 @@
           <h3 class="pull-right" id="search-suggest">↑ Search for something</h3>
           <table class='table hide mytable' border=0 cellpadding=4>
           </table>
-          <div id="tracks"></div>
         </div>
       </div>
     </div>
