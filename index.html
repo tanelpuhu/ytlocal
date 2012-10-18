@@ -35,13 +35,16 @@
             autoplay = true,
             search_results = [],
             currently_related = [],
+            current_track = '',
             api_url = 'https://gdata.youtube.com/feeds/api/videos/';
 
         function play_pause() {
             if (ytplayer) {
                 if (ytplayer.getPlayerState() == 1) {
+                    $('#play').text('play');
                     ytplayer.pauseVideo();
                 } else {
+                    $('#play').text('pause');
                     ytplayer.playVideo();
                 }
             }
@@ -96,8 +99,10 @@
         function volume_mute() {
             if (ytplayer) {
                 if (ytplayer.isMuted()) {
+                    $('#mute').text('mute');
                     ytplayer.unMute();
                 } else {
+                    $('#mute').text('unmute');
                     ytplayer.mute();
                 }
             }
@@ -136,6 +141,8 @@
         function load_new_video(watch, startSeconds) {
             if (ytplayer && watch) {
                 ytplayer.loadVideoById(watch, parseInt(startSeconds, 10), format);
+                current_track = watch;
+                $('#play').text('pause');
                 $.getScript(api_url + watch + '?v=2&format=5&alt=json-in-script&callback=clbk_current');
             }
         }
@@ -168,13 +175,25 @@
             }
         }
 
+        function play_next() {
+          var next = $('.track:lt(1)');
+          if(next.data('id') === current_track) {
+            next.fadeOut().remove();
+            next = $('.track:lt(1)');
+          }
+          if(next.length && next.data('id')) {
+            play_watch(next.data('id'));
+            next.fadeOut().remove();
+          }
+        }
+
         function on_player_state_change(newState) {
             if (newState === 0) {
                 setTimeout(function() {
                     if($('#loop:checked').length) {
                         seek_to(0);
-                    } else if(currently_related) {
-                        play_watch(get_random(currently_related));
+                    } else {
+                        play_next();
                     }
                 }, 1000);
             }
@@ -222,7 +241,7 @@
                   img_src = feed[i].media$group.media$thumbnail[0].url,
                   title = feed[i].title.$t,
                   duration = feed[i].media$group.yt$duration.seconds;
-                  row = "<tr><td><a href='#" + id + "' class='play_me' data-id='" + id +"'><img src='" +img_src + "' border=0></a></td>";
+                  row = "<tr class='track' data-id='" + id +"'><td><a href='#" + id + "' class='play_me' data-id='" + id +"'><img src='" +img_src + "' border=0></a></td>";
                   row+= "<td><a href='#" + id + "' class='play_me' data-id='" + id +"'>" + title + "</a></td>"
                   row+= "<td class='pagination-right'>" + time_text(duration) + "</td></tr>"
               $('.mytable').append(row);
@@ -318,15 +337,17 @@
           &#30446; <span id="view_count" class="bold">0</span>
           <span id='song_time'>00:00 / 00:00</span>
           <div class="btn-group">
-            <button class="btn" onclick="play_pause();">play/pause</button>
-            <button class="btn" onclick="volume_mute();">mute/unmute</button>
+            <button class="btn" onclick="play_pause();" id="play">play</button>
+            <button class="btn" onclick="volume_mute();" id="mute">mute</button>
             <button class="btn" onclick="volume_up();">up</button>
             <button class="btn" onclick="volume_down();">down</button>
-            <label>
-                Loop <input type='checkbox' class='check' name='loop' id='loop' value='1'>
-            </label>
+            <button class="btn" onclick="play_next();">next</button>
           </div>
         </div>
+        <br>
+        <label>
+            <input type='checkbox' class='check' name='loop' id='loop' value='1'> Loop
+        </label>
         <hr>
         <div id="song_descr"></div>
         </div>
