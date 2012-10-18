@@ -194,7 +194,7 @@
             var id = data.entry.media$group.yt$videoid.$t,
                 desc = data.entry.media$group.media$description.$t;
 
-            while(desc.indexOf('\n') != -1) {
+            while(desc.indexOf('\n') !== -1) {
                 desc = desc.replace('\n', '<br>');
             }
             document.title = data.entry.title.$t;
@@ -203,7 +203,7 @@
             $('#thumbs_up').text(data.entry.yt$rating.numLikes);
             $('#thumbs_down').text(data.entry.yt$rating.numDislikes);
             $('#view_count').text(data.entry.yt$statistics.viewCount);
-            $('#status').text('Refreching with related tracks...');
+            $('#status').text('Refreshing with related tracks...');
             $.getScript(api_url + id + '/related?v=2&format=5&category=Music&alt=json-in-script&callback=clbk_related');
         }
 
@@ -256,7 +256,7 @@
         $(document).ready(function() {
             $(document).bind('keypress', function(e) {
                 var target = (e.target && e.target.type) || 'other';
-                if (target != 'text' && target != 'submit') {
+                if ('text,submit,search'.indexOf(target) === -1) {
                     if (e.which == 32) {
                         play_pause();
                         return false;
@@ -310,22 +310,22 @@
               swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=ytplayer",
                            "ytapiplayer", player.width, player.height, "8", null, null, params, atts);
           </script>
-          <h4 id='song_title'>Random Title</h4>
-          <div id="ytapiplayer">No Flash</div>
+          <h4 id='song_title'></h4>
+          <div id="ytapiplayer"></div>
           <br>
-          ↑ <span id="thumbs_up" class="bold">-</span>
-          ↓ <span id="thumbs_down" class="bold">-</span>
-          &#30446; <span id="view_count" class="bold">-</span>
+          ↑ <span id="thumbs_up" class="bold">0</span>
+          ↓ <span id="thumbs_down" class="bold">0</span>
+          &#30446; <span id="view_count" class="bold">0</span>
           <span id='song_time'>00:00 / 00:00</span>
           <div class="btn-group">
             <button class="btn" onclick="play_pause();">play/pause</button>
             <button class="btn" onclick="volume_mute();">mute/unmute</button>
             <button class="btn" onclick="volume_up();">up</button>
             <button class="btn" onclick="volume_down();">down</button>
-          <label>
-              Loop <input type='checkbox' class='check' name='loop' id='loop' value='1'>
-          </label>
-            </div>
+            <label>
+                Loop <input type='checkbox' class='check' name='loop' id='loop' value='1'>
+            </label>
+          </div>
         </div>
         <hr>
         <div id="song_descr"></div>
