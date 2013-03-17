@@ -151,26 +151,28 @@
       }
 
       function show_message(text) {
-        if(text) {
-          $('#status').fadeIn().text(text).delay(2000).fadeOut();
-        } else {
-          $('#status').fadeOut();
-        }
+          if (text) {
+              $('#status').fadeIn().text(text).delay(2000).fadeOut();
+          } else {
+              $('#status').fadeOut();
+          }
       }
 
-      function search_by_title(title) {
+      function search_by_title(title, play) {
           title = encodeURIComponent(title);
           show_message('Searching...');
-          $.getScript(api_url + '?q=' + title + '&v=2&format=5&category=Music&alt=json-in-script&callback=clbk_search');
+          var clbk = 'clbk_search';
+          if (play) {
+              clbk = 'clbk_search_play';
+          }
+          $.getScript(api_url + '?q=' + title + '&v=2&format=5&category=Music&alt=json-in-script&callback=' + clbk);
       }
 
       function search_submit() {
           if ($('#q').val()) {
               search_by_title($('#q').val());
           } else {
-            show_message()
-            show_message('Enter something...');
-
+              show_message('Enter something...');
           }
           return false;
       }
@@ -212,7 +214,8 @@
           var hash = location.hash.substring(1);
           if (hash) {
               if (hash.substring(0, 2) === 'q:') {
-                  search_by_title(hash.substring(2));
+                  $('#q').val(hash.substring(2));
+                  search_by_title(hash.substring(2), 1);
               } else {
                   play_watch(hash);
               }
@@ -286,7 +289,13 @@
           } else {
               show_message('');
           }
+          return search_results.length;
+      }
 
+      function clbk_search_play(data) {
+          if (clbk_search(data)) {
+              play_next();
+          }
       }
 
       $(document).ready(function () {
@@ -309,21 +318,21 @@
           }
           key('n', play_next);
           key('r', load_related);
-          key('space', function(e) {
-            play_pause();
-            e.preventDefault();
+          key('space', function (e) {
+              play_pause();
+              e.preventDefault();
           });
-          key('-,s', function(){
-            if(ytplayer) {
-              ytplayer.width *= 0.9;
-              ytplayer.height *= 0.9;
-            }
+          key('-,s', function () {
+              if (ytplayer) {
+                  ytplayer.width *= 0.9;
+                  ytplayer.height *= 0.9;
+              }
           });
-          key('+,w', function(){
-            if(ytplayer) {
-              ytplayer.width *= 1.1;
-              ytplayer.height *= 1.1;
-            }
+          key('+,w', function () {
+              if (ytplayer) {
+                  ytplayer.width *= 1.1;
+                  ytplayer.height *= 1.1;
+              }
           });
       });
     </script>
