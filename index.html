@@ -14,230 +14,241 @@
     </style>
     <script type="text/javascript" src="js/jquery.min.js"></script>
     <script type="text/javascript" src="js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/keymaster.min.js"></script>
     <script src="https://www.google.com/jsapi?key=ABQIAAAAUFhWyG3PCr5qQ1N1-Da58BSijuhDh6bhkVNiCWkwXm1RWNn4jxTIhy9VD42I5uMUjGdZgqjFfBxulQ" type="text/javascript"></script>
     <script type="text/javascript">
-        google.load("swfobject", "2.1");
-        function get_random(elem) {
-            var len = elem.length,
-                ran = Math.random() * len;
-            if (len) {
-                return elem[Math.floor(ran)];
-            }
-        };
+      google.load("swfobject", "2.1");
 
-        var ytplayer = null,
-            player = {
-              height: 242,
-              width: 325
-            }
-            track_limit = 15,
-            format = 'default',
-            autoplay = true,
-            search_results = [],
-            currently_related = [],
-            current_track = '',
-            api_url = 'https://gdata.youtube.com/feeds/api/videos/';
+      function get_random(elem) {
+          var len = elem.length,
+              ran = Math.random() * len;
+          if (len) {
+              return elem[Math.floor(ran)];
+          }
+      }
 
-        function play_pause() {
-            if (ytplayer) {
-                if (ytplayer.getPlayerState() == 1) {
-                    $('#play').text('play');
-                    ytplayer.pauseVideo();
-                } else {
-                    $('#play').text('pause');
-                    ytplayer.playVideo();
-                }
-            }
-        }
+      var ytplayer = null,
+          player = {
+              height: 292,
+              width: 393
+          },
+          track_limit = 30,
+          format = 'default',
+          autoplay = true,
+          search_results = [],
+          currently_related = [],
+          current_track = '',
+          api_url = 'https://gdata.youtube.com/feeds/api/videos/';
 
-        function volume_up() {
-            if (ytplayer) {
-                var vol = ytplayer.getVolume(),
-                    value = (vol + 10 > 100) ? 100 : vol + 10;
-                ytplayer.setVolume(value);
-            }
-        }
+      function play_pause() {
+          if (ytplayer) {
+              if (ytplayer.getPlayerState() == 1) {
+                  $('#play').html('<img src=img/play.png>');
+                  ytplayer.pauseVideo();
+              } else {
+                  $('#play').html('<img src=img/pause.png>');
+                  ytplayer.playVideo();
+              }
+          }
+      }
 
-        function volume_down() {
-            if (ytplayer) {
-                var vol = ytplayer.getVolume(),
-                    value = (vol - 10 < 0) ? 0 : vol - 10;
-                ytplayer.setVolume(value);
-            }
-        }
+      function volume_up() {
+          if (ytplayer) {
+              var vol = ytplayer.getVolume(),
+                  value = (vol + 10 > 100) ? 100 : vol + 10;
+              ytplayer.setVolume(value);
+          }
+      }
 
-        function get_player_state() {
-            if (ytplayer) {
-                return ytplayer.getPlayerState();
-            }
-        }
+      function volume_down() {
+          if (ytplayer) {
+              var vol = ytplayer.getVolume(),
+                  value = (vol - 10 < 0) ? 0 : vol - 10;
+              ytplayer.setVolume(value);
+          }
+      }
 
-        function get_song_bytes_loaded() {
-            if (ytplayer) {
-                return ytplayer.getVideoBytesLoaded();
-            }
-        }
+      function get_player_state() {
+          if (ytplayer) {
+              return ytplayer.getPlayerState();
+          }
+      }
 
-        function get_song_bytes_total() {
-            if (ytplayer) {
-                return ytplayer.getVideoBytesTotal();
-            }
-        }
+      function get_song_bytes_loaded() {
+          if (ytplayer) {
+              return ytplayer.getVideoBytesLoaded();
+          }
+      }
 
-        function get_song_current_time() {
-            if (ytplayer) {
-                return ytplayer.getCurrentTime();
-            }
-        }
+      function get_song_bytes_total() {
+          if (ytplayer) {
+              return ytplayer.getVideoBytesTotal();
+          }
+      }
 
-        function get_song_duration() {
-            if (ytplayer) {
-                return ytplayer.getDuration();
-            }
-        }
+      function get_song_current_time() {
+          if (ytplayer) {
+              return ytplayer.getCurrentTime();
+          }
+      }
 
-        function volume_mute() {
-            if (ytplayer) {
-                if (ytplayer.isMuted()) {
-                    $('#mute').text('mute');
-                    ytplayer.unMute();
-                } else {
-                    $('#mute').text('unmute');
-                    ytplayer.mute();
-                }
-            }
-        }
+      function get_song_duration() {
+          if (ytplayer) {
+              return ytplayer.getDuration();
+          }
+      }
 
-        function seek_to(seconds) {
-            if (ytplayer) {
-                ytplayer.seekTo(seconds, true);
-            }
-        }
+      function seek_to(seconds) {
+          if (ytplayer) {
+              ytplayer.seekTo(seconds, true);
+          }
+      }
 
-        function time_text(seconds) {
+      function time_text(seconds) {
           var m = Math.floor(seconds / 60),
               s = Math.floor(seconds % 60);
           return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
-        }
+      }
 
-        function update_payer_info() {
-            var pros, pros2, time_total, time_now, buf = '';
-            if (ytplayer) {
-                pros = (get_song_bytes_loaded() / get_song_bytes_total()) * 100;
-                time_total = get_song_duration();
-                time_now = get_song_current_time();
-                if (time_total >= 0 && time_now >= 0) {
-                    pros2 = (time_now / time_total) * 100;
-                    buf = time_text(time_now);
-                    buf = buf + " / ";
-                    buf += time_text(time_total);
-                } else {
-                    pros = pros2 = 0;
-                }
-            }
-            $('#song_time').html(buf);
-        }
+      function update_payer_info() {
+          var pros, pros2, time_total, time_now, buf = '';
+          if (ytplayer) {
+              pros = (get_song_bytes_loaded() / get_song_bytes_total()) * 100;
+              time_total = get_song_duration();
+              time_now = get_song_current_time();
+              if (time_total >= 0 && time_now >= 0) {
+                  pros2 = (time_now / time_total) * 100;
+                  buf = time_text(time_now);
+                  buf = buf + " / ";
+                  buf += time_text(time_total);
+              } else {
+                  pros = pros2 = 0;
+              }
+          }
+          $('#song_time').html(buf);
+      }
 
-        function load_new_video(watch, startSeconds) {
-            if (ytplayer && watch) {
-                ytplayer.loadVideoById(watch, parseInt(startSeconds, 10), format);
-                current_track = watch;
-                $('#play').text('pause');
-                $.getScript(api_url + watch + '?v=2&format=5&alt=json-in-script&callback=clbk_current');
-                $("tr[data-id='" + watch + "']").fadeOut().remove();
-                if($('.track').length === 0) {
-                    load_related();
-                }
-            }
-        }
+      function remove_video(watch) {
+          $("tr[data-id='" + watch + "']").fadeOut().remove();
+          if ($('.track').length === 0) {
+              load_related();
+          }
+      }
 
-        function play_watch(watch) {
-            location.href = '#' + watch;
-            load_new_video(watch);
-        }
+      function load_new_video(watch, startSeconds) {
+          if (ytplayer && watch) {
+              ytplayer.loadVideoById(watch, parseInt(startSeconds, 10), format);
+              current_track = watch;
+              $('#play').html('<img src=img/pause.png>');
+              $.getScript(api_url + watch + '?v=2&format=5&alt=json-in-script&callback=clbk_current');
+              remove_video(watch);
+          }
+      }
 
-        function search_by_title(title) {
-            title = encodeURIComponent(title)
-            $('#status').text('Searching...');
-            $.getScript(api_url + '?q=' + title + '&v=2&format=5&category=Music&alt=json-in-script&callback=clbk_search');
-        }
+      function play_watch(watch) {
+          location.href = '#' + watch;
+          load_new_video(watch);
+      }
 
-        function search_submit() {
-            if($('#q').val()) {
-                search_by_title($('#q').val())
-            }
-            return false;
+      function show_message(text) {
+        if(text) {
+          $('#status').fadeIn().text(text).delay(2000).fadeOut();
+        } else {
+          $('#status').fadeOut();
         }
+      }
 
-        function onYouTubePlayerReady(playerId) {
-            ytplayer = document.getElementById('myytplayer');
-            setInterval(update_payer_info, 500);
-            ytplayer.addEventListener("onStateChange", "on_player_state_change");
-            ytplayer.addEventListener('onError', 'on_player_error');
-            if (autoplay) {
-                handle_hash();
-            }
-        }
+      function search_by_title(title) {
+          title = encodeURIComponent(title);
+          show_message('Searching...');
+          $.getScript(api_url + '?q=' + title + '&v=2&format=5&category=Music&alt=json-in-script&callback=clbk_search');
+      }
 
-        function play_next() {
+      function search_submit() {
+          if ($('#q').val()) {
+              search_by_title($('#q').val());
+          } else {
+            show_message()
+            show_message('Enter something...');
+
+          }
+          return false;
+      }
+
+      function onYouTubePlayerReady(playerId) {
+          ytplayer = document.getElementById('myytplayer');
+          setInterval(update_payer_info, 500);
+          ytplayer.addEventListener("onStateChange", "on_player_state_change");
+          ytplayer.addEventListener('onError', 'on_player_error');
+          if (autoplay) {
+              handle_hash();
+          }
+      }
+
+      function play_next() {
           var next = $('.track:lt(1)');
-          if(next.length && next.data('id')) {
-            play_watch(next.data('id'));
+          if (next.length && next.data('id')) {
+              play_watch(next.data('id'));
           }
-        }
+      }
 
-        function on_player_state_change(newState) {
-            if (newState === 0) {
-                setTimeout(function() {
-                    if($('#loop:checked').length) {
-                        seek_to(0);
-                    } else {
-                        play_next();
-                    }
-                }, 1000);
-            }
-        }
-
-        function on_player_error(errorCode) {
-            alert('ERROR:' + errorCode);
-        }
-
-        function handle_hash() {
-            var l = location.hash;
-            if (l.indexOf('#') === 0 && l.substring(1)) {
-                play_watch(l.substring(1))
-            }
-        }
-        function clbk_current(data) {
-            var id = data.entry.media$group.yt$videoid.$t,
-                desc = data.entry.media$group.media$description.$t;
-
-            while(desc.indexOf('\n') !== -1) {
-                desc = desc.replace('\n', '<br>');
-            }
-            document.title = data.entry.title.$t;
-            $('#song_title').html(data.entry.title.$t);
-            $('#song_descr').html(desc);
-            $('#thumbs_up').text(data.entry.yt$rating.numLikes);
-            $('#thumbs_down').text(data.entry.yt$rating.numDislikes);
-            $('#view_count').text(data.entry.yt$statistics.viewCount);
-        }
-
-        function load_related() {
-          if(current_track) {
-            $('#status').text('Refreshing with related tracks...');
-            $.getScript(api_url + current_track + '/related?v=2&format=5&category=Music&alt=json-in-script&callback=clbk_related');
+      function on_player_state_change(newState) {
+          if (newState === 0) {
+              setTimeout(function () {
+                  if ($('#loop:checked').length) {
+                      seek_to(0);
+                  } else {
+                      play_next();
+                  }
+              }, 1000);
           }
-        }
+      }
 
-        function print_tracks(feed) {
-          if(feed === undefined) {
-            return [];
+      function on_player_error(errorCode) {
+          alert('ERROR:' + errorCode);
+      }
+
+      function handle_hash() {
+          var hash = location.hash.substring(1);
+          if (hash) {
+              if (hash.substring(0, 2) === 'q:') {
+                  search_by_title(hash.substring(2));
+              } else {
+                  play_watch(hash);
+              }
           }
-          $('#status').text('');
-          if(feed.length) {
-            $('.mytable').removeClass('hide').html('');
-            $('#search-suggest').hide();
+      }
+
+      function clbk_current(data) {
+          var id = data.entry.media$group.yt$videoid.$t,
+              desc = data.entry.media$group.media$description.$t;
+
+          while (desc.indexOf('\n') !== -1) {
+              desc = desc.replace('\n', '<br>');
+          }
+          document.title = data.entry.title.$t;
+          $('#song_title').html(data.entry.title.$t);
+          $('#song_descr').html(desc);
+          $('#thumbs_up').text(data.entry.yt$rating.numLikes);
+          $('#thumbs_down').text(data.entry.yt$rating.numDislikes);
+          $('#view_count').text(data.entry.yt$statistics.viewCount);
+      }
+
+      function load_related() {
+          if (current_track) {
+              show_message('Refreshing with related tracks...');
+              $.getScript(api_url + current_track + '/related?v=2&format=5&category=Music&alt=json-in-script&callback=clbk_related');
+          }
+      }
+
+      function print_tracks(feed) {
+          if (feed === undefined) {
+              return [];
+          }
+          show_message('');
+          if (feed.length) {
+              $('.mytable').removeClass('hide').html('');
+              $('#search-suggest').hide();
           }
           var result = [];
           for (var i = 0; i < feed.length; i++) {
@@ -245,89 +256,105 @@
                   img_src = feed[i].media$group.media$thumbnail[0].url,
                   title = feed[i].title.$t,
                   duration = feed[i].media$group.yt$duration.seconds;
-                  row = "<tr class='track' data-id='" + id +"'><td><a href='#" + id + "' class='play_me' data-id='" + id +"'><img src='" +img_src + "' border=0></a></td>";
-                  row+= "<td><a href='#" + id + "' class='play_me' data-id='" + id +"'>" + title + "</a></td>"
-                  row+= "<td class='pagination-right'>" + time_text(duration) + "</td></tr>"
+              row = "<tr class='track' data-id='" + id + "'>";
+              row += "<td><a href='#" + id + "' class='play_me' data-id='" + id + "'><img src='" + img_src + "' border=0 width=80></a></td>";
+              row += "<td><a href='#" + id + "' class='play_me' data-id='" + id + "'>" + title + "</a></td>";
+              row += "<td>" + time_text(duration) + "</td>";
+              row += " <td><a href='javascript:remove_video(\"" + id + "\")'>&#10008;</a></tr>";
               $('.mytable').append(row);
               result.push(id);
-              if(result.length >= track_limit) {
+              if (result.length >= track_limit) {
                   break;
               }
-          };
+          }
           return result;
-        }
+      }
 
-        function clbk_related(data) {
-            currently_related = print_tracks(data.feed.entry);
-            if(currently_related.length === 0) {
-                $('#status').text('No related tracks!')
-            } else {
-                $('#status').text('')
+      function clbk_related(data) {
+          currently_related = print_tracks(data.feed.entry);
+          if (currently_related.length === 0) {
+              show_message('No related tracks!');
+          } else {
+              show_message('');
+          }
+      }
+
+      function clbk_search(data) {
+          search_results = print_tracks(data.feed.entry);
+          if (search_results.length === 0) {
+              show_message('No search results!');
+          } else {
+              show_message('');
+          }
+
+      }
+
+      $(document).ready(function () {
+          $('a.play_me').live('click', function () {
+              play_watch($(this).data('id'));
+          });
+
+          $('#search').on('submit', function (e) {
+              search_submit();
+              e.preventDefault();
+          });
+
+          if (localStorage) {
+              $('input.check').each(function () {
+                  var val = localStorage.getItem('checkbox_' + this.name) === '1';
+                  $('input[name=' + this.name + ']').prop('checked', val);
+              }).on('change', function () {
+                  localStorage.setItem('checkbox_' + this.name, this.checked ? '1' : '0');
+              });
+          }
+          key('n', play_next);
+          key('r', load_related);
+          key('space', function(e) {
+            play_pause();
+            e.preventDefault();
+          });
+          key('-,s', function(){
+            if(ytplayer) {
+              ytplayer.width *= 0.9;
+              ytplayer.height *= 0.9;
             }
-        }
-
-        function clbk_search(data) {
-            search_results = print_tracks(data.feed.entry);
-            if(search_results.length === 0) {
-                $('#status').text('No search results!')
-            } else {
-                $('#status').text('')
+          });
+          key('+,w', function(){
+            if(ytplayer) {
+              ytplayer.width *= 1.1;
+              ytplayer.height *= 1.1;
             }
-
-        }
-
-        $(document).ready(function() {
-            $(document).bind('keypress', function(e) {
-                var target = (e.target && e.target.type) || 'other';
-                if ('text,submit,search'.indexOf(target) === -1) {
-                    if (e.which == 32) {
-                        play_pause();
-                        return false;
-                    }
-                }
-            });
-            $('a.play_me').live('click', function() {
-                play_watch($(this).data('id'));
-            });
-
-            $('#search').on('submit', function(e) {
-                search_submit();
-                e.preventDefault();
-            });
-
-            if(localStorage) {
-                $('input.check').each(function(){
-                    var val = localStorage.getItem('checkbox_' + this.name) === '1';
-                    $('input[name=' + this.name +']').prop('checked', val);
-                }).on('change', function(){
-                    localStorage.setItem('checkbox_' + this.name, this.checked?'1':'0');
-                });
-            }
-
-        });
+          });
+      });
     </script>
 </head>
 <body>
   <div class="navbar navbar-fixed-top">
     <div class="navbar-inner">
       <div class="container-fluid topbar">
-        <a class="brand" href="./">YTLocal</a>
-        <span class='navbar-text' id="status"></span>
-        <form class='navbar-form pull-right' id="search">
+        <form class='navbar-form' id="search">
+          <a class="brand pull-right" href="./">YTLocal</a>
           <input type='search' class='span7' id=q placeholder=' song title '>
           <input type='submit' value=' Search ' class='btn btn-primary'>
+          <div class='navbar-text pull-right' id="status"></div>
         </form>
       </div>
     </div>
   </div>
   <div class='container-fluid'>
     <div class="row-fluid">
-      <div class="span4">
+      <div class="span7">
+        <h3 id="search-suggest">Search for something ↑</h3>
+        <table class='table hide mytable table-striped table-condensed table-hover' border=0 cellpadding=4>
+        </table>
+      </div>
+      <div class="span5">
         <div class="center">
           <script type="text/javascript"> 
               var params = {
                   allowScriptAccess: "always",
-                  bgcolor: "#cccccc"
+                  bgcolor: "#cccccc",
+                  wmode: "opaque"
               };
               var atts = { id: "myytplayer" };
               swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=ytplayer",
@@ -341,11 +368,18 @@
           &#30446; <span id="view_count" class="bold">0</span>
           <span id='song_time'>00:00 / 00:00</span>
           <div class="btn-group">
-            <button class="btn" onclick="play_pause();" id="play">play</button>
-            <button class="btn" onclick="volume_mute();" id="mute">mute</button>
-            <button class="btn" onclick="volume_up();">up</button>
-            <button class="btn" onclick="volume_down();">down</button>
-            <button class="btn" onclick="play_next();">next</button>
+            <button class="btn" onclick="play_pause();" id="play">
+              <img src="img/play.png">
+            </button>
+            <button class="btn" onclick="volume_down();">
+              <img src="img/vol_down.png">
+            </button>
+            <button class="btn" onclick="volume_up();">
+              <img src="img/vol_up.png">
+            </button>
+            <button class="btn" onclick="play_next();">
+              <img src="img/next.png">
+            </button>
           </div>
           <br>
           <button class="btn" onclick="load_related();">Load related</button>
@@ -355,11 +389,6 @@
         </div>
         <hr>
         <div id="song_descr"></div>
-        </div>
-        <div class="span8">
-          <h3 class="pull-right" id="search-suggest">↑ Search for something</h3>
-          <table class='table hide mytable' border=0 cellpadding=4>
-          </table>
         </div>
       </div>
     </div>
