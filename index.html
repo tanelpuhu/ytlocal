@@ -214,8 +214,9 @@
           var hash = location.hash.substring(1);
           if (hash) {
               if (hash.substring(0, 2) === 'q:') {
-                  $('#q').val(hash.substring(2));
-                  search_by_title(hash.substring(2), 1);
+                  var q = decodeURIComponent(hash.substring(2));
+                  $('#q').val(q);
+                  search_by_title(q, 1);
               } else {
                   play_watch(hash);
               }
