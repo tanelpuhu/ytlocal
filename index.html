@@ -367,7 +367,7 @@
                   wmode: "opaque"
               };
               var atts = { id: "myytplayer" };
-              swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=ytplayer",
+              swfobject.embedSWF("https://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=ytplayer",
                            "ytapiplayer", player.width, player.height, "8", null, null, params, atts);
           </script>
           <h4 id='song_title'></h4>
@@ -377,6 +377,7 @@
           ↓ <span id="thumbs_down" class="bold">0</span>
           &#30446; <span id="view_count" class="bold">0</span>
           <span id='song_time'>00:00 / 00:00</span>
+          <br>
           <div class="btn-group">
             <button class="btn" onclick="play_pause();" id="play">
               <img src="img/play.png">
