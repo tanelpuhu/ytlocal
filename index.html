@@ -15,18 +15,8 @@
     <script type="text/javascript" src="js/jquery.min.js"></script>
     <script type="text/javascript" src="js/bootstrap.min.js"></script>
     <script type="text/javascript" src="js/keymaster.min.js"></script>
-    <script src="https://www.google.com/jsapi?key=ABQIAAAAUFhWyG3PCr5qQ1N1-Da58BSijuhDh6bhkVNiCWkwXm1RWNn4jxTIhy9VD42I5uMUjGdZgqjFfBxulQ" type="text/javascript"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js" type="text/javascript"></script>
     <script type="text/javascript">
-      google.load("swfobject", "2.1");
-
-      function get_random(elem) {
-          var len = elem.length,
-              ran = Math.random() * len;
-          if (len) {
-              return elem[Math.floor(ran)];
-          }
-      }
-
       var ytplayer = null,
           player = {
               height: 292,
@@ -38,7 +28,8 @@
           search_results = [],
           currently_related = [],
           current_track = '',
-          api_url = 'https://gdata.youtube.com/feeds/api/videos/';
+          api_search = 'https://www.googleapis.com/youtube/v3/search?key=AIzaSyBXvgH3EooBGKkicX2724L9EoD1M6PVPqE&part=snippet',
+          api_videos = 'https://www.googleapis.com/youtube/v3/videos?key=AIzaSyBXvgH3EooBGKkicX2724L9EoD1M6PVPqE&part=snippet';
 
       function play_pause() {
           if (ytplayer) {
@@ -140,7 +131,7 @@
               ytplayer.loadVideoById(watch, parseInt(startSeconds, 10), format);
               current_track = watch;
               $('#play').html('<img src=img/pause.png>');
-              $.getScript(api_url + watch + '?v=2&format=5&alt=json-in-script&callback=clbk_current');
+              $.getJSON(api_videos + '&id=' + watch, clbk_current);
               remove_video(watch);
           }
       }
@@ -161,11 +152,11 @@
       function search_by_title(title, play) {
           title = encodeURIComponent(title);
           show_message('Searching...');
-          var clbk = 'clbk_search';
+          var clbk = clbk_search;
           if (play) {
-              clbk = 'clbk_search_play';
+              clbk = clbk_search_play;
           }
-          $.getScript(api_url + '?q=' + title + '&v=2&format=5&category=Music&alt=json-in-script&callback=' + clbk);
+          $.getJSON(api_search + '&q=' + title + '&videoEmbeddable=true&type=video&maxResults=50', clbk);
       }
 
       function search_submit() {
@@ -207,8 +198,8 @@
       }
 
       function on_player_error(errorCode) {
-        show_message('ERROR:' + errorCode);
-        play_next();
+          show_message('ERROR:' + errorCode);
+          play_next();
       }
 
       function handle_hash() {
@@ -225,24 +216,21 @@
       }
 
       function clbk_current(data) {
-          var id = data.entry.media$group.yt$videoid.$t,
-              desc = data.entry.media$group.media$description.$t;
+          var item = data.items[0],
+              desc = item.snippet.description;
 
           while (desc.indexOf('\n') !== -1) {
               desc = desc.replace('\n', '<br>');
           }
-          document.title = data.entry.title.$t;
-          $('#song_title').html(data.entry.title.$t);
+          document.title = item.snippet.title;
+          $('#song_title').html(item.snippet.title);
           $('#song_descr').html(desc);
-          $('#thumbs_up').text(data.entry.yt$rating.numLikes);
-          $('#thumbs_down').text(data.entry.yt$rating.numDislikes);
-          $('#view_count').text(data.entry.yt$statistics.viewCount);
       }
 
       function load_related() {
           if (current_track) {
               show_message('Refreshing with related tracks...');
-              $.getScript(api_url + current_track + '/related?v=2&format=5&category=Music&alt=json-in-script&callback=clbk_related');
+              $.getJSON(api_search + '&relatedToVideoId=' + current_track + '&videoEmbeddable=true&type=video&maxResults=50', clbk_related);
           }
       }
 
@@ -257,14 +245,12 @@
           }
           var result = [];
           for (var i = 0; i < feed.length; i++) {
-              var id = feed[i].media$group.yt$videoid.$t,
-                  img_src = feed[i].media$group.media$thumbnail[0].url,
-                  title = feed[i].title.$t,
-                  duration = feed[i].media$group.yt$duration.seconds;
+              var id = feed[i].id.videoId,
+                  img_src = feed[i].snippet.thumbnails['default'].url,
+                  title = feed[i].snippet.title;
               row = "<tr class='track' data-id='" + id + "'>";
               row += "<td><a href='#" + id + "' class='play_me' data-id='" + id + "'><img src='" + img_src + "' border=0 width=80></a></td>";
               row += "<td><a href='#" + id + "' class='play_me' data-id='" + id + "'>" + title + "</a></td>";
-              row += "<td>" + time_text(duration) + "</td>";
               row += " <td><a href='javascript:remove_video(\"" + id + "\")'>&#10008;</a></tr>";
               $('.mytable').append(row);
               result.push(id);
@@ -276,7 +262,7 @@
       }
 
       function clbk_related(data) {
-          currently_related = print_tracks(data.feed.entry);
+          currently_related = print_tracks(data.items);
           if (currently_related.length === 0) {
               show_message('No related tracks!');
           } else {
@@ -285,7 +271,7 @@
       }
 
       function clbk_search(data) {
-          search_results = print_tracks(data.feed.entry);
+          search_results = print_tracks(data.items);
           if (search_results.length === 0) {
               show_message('No search results!');
           } else {
@@ -356,22 +342,21 @@
     <div class="row-fluid">
       <div class="span5">
         <div class="center">
-          <script type="text/javascript"> 
-              var params = {
-                  allowScriptAccess: "always",
-                  bgcolor: "#cccccc",
-                  wmode: "opaque"
-              };
-              var atts = { id: "myytplayer" };
-              swfobject.embedSWF("https://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=ytplayer",
-                           "ytapiplayer", player.width, player.height, "8", null, null, params, atts);
+          <script type="text/javascript">
+            var params = {
+                allowScriptAccess: "always",
+                bgcolor: "#cccccc",
+                wmode: "opaque"
+            };
+            var atts = {
+                id: "myytplayer"
+            };
+            swfobject.embedSWF("https://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=ytplayer",
+                "ytapiplayer", player.width, player.height, "8", null, null, params, atts);
           </script>
           <h4 id='song_title'></h4>
           <div id="ytapiplayer"></div>
           <br>
-          ↑ <span id="thumbs_up" class="bold">0</span>
-          ↓ <span id="thumbs_down" class="bold">0</span>
-          &#30446; <span id="view_count" class="bold">0</span>
           <span id='song_time'>00:00 / 00:00</span>
           <br>
           <div class="btn-group">
