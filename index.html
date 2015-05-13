@@ -207,7 +207,8 @@
       }
 
       function on_player_error(errorCode) {
-          alert('ERROR:' + errorCode);
+        show_message('ERROR:' + errorCode);
+        play_next();
       }
 
       function handle_hash() {
@@ -353,11 +354,6 @@
   </div>
   <div class='container-fluid'>
     <div class="row-fluid">
-      <div class="span7">
-        <h3 id="search-suggest">Search for something ↑</h3>
-        <table class='table hide mytable table-striped table-condensed table-hover' border=0 cellpadding=4>
-        </table>
-      </div>
       <div class="span5">
         <div class="center">
           <script type="text/javascript"> 
@@ -401,6 +397,11 @@
         <hr>
         <div id="song_descr"></div>
         </div>
+      <div class="span7">
+        <h3 id="search-suggest">Search for something ↑</h3>
+        <table class='table hide mytable table-striped table-condensed table-hover' border=0 cellpadding=4>
+        </table>
+      </div>
       </div>
     </div>
   </body>
